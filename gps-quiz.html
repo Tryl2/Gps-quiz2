@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GeoQuiz — Location-Based Quiz Explorer</title>
+<style>
+  :root {
+    --navy: #0F1923;
+    --slate: #1E2D3D;
+    --slate2: #243447;
+    --amber: #F5A623;
+    --amber-dim: #B87A1A;
+    --sage: #5B8A72;
+    --coral: #E05A47;
+    --cream: #F0EDE6;
+    --cream-dim: #A09B94;
+    --white: #FFFFFF;
+    --border: rgba(240,237,230,0.12);
+    --border-bright: rgba(245,166,35,0.35);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--navy);
+    color: var(--cream);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; min-height: 100vh; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* ── HOME ── */
+  #home {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+    background: radial-gradient(ellipse at 50% 30%, #1a2f44 0%, var(--navy) 70%);
+  }
+  .compass-logo {
+    width: 100px; height: 100px;
+    margin-bottom: 2rem;
+    position: relative;
+  }
+  .compass-logo svg { width: 100%; height: 100%; }
+  .home-title {
+    font-size: clamp(2rem, 6vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+  .home-title span { color: var(--amber); }
+  .home-sub {
+    color: var(--cream-dim);
+    font-size: 1rem;
+    margin-bottom: 3rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+  }
+  .home-buttons { display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 320px; }
+  .btn-primary {
+    background: var(--amber);
+    color: var(--navy);
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: all 0.15s;
+  }
+  .btn-primary:hover { background: #FFB733; transform: translateY(-1px); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--cream);
+    border: 1px solid var(--border-bright);
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-secondary:hover { border-color: var(--amber); color: var(--amber); }
+
+  /* ── HEADER ── */
+  .app-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--slate);
+    flex-shrink: 0;
+  }
+  .back-btn {
+    background: none; border: none; color: var(--amber);
+    cursor: pointer; font-size: 1.4rem; padding: 0.25rem;
+    line-height: 1; flex-shrink: 0;
+  }
+  .header-title { font-size: 1rem; font-weight: 700; flex: 1; }
+  .header-meta { font-size: 0.75rem; color: var(--cream-dim); font-family: monospace; }
+
+  /* ── CREATOR ── */
+  #creator { background: var(--navy); }
+  .creator-body { flex: 1; padding: 1.25rem; overflow-y: auto; }
+
+  .quiz-meta-form { margin-bottom: 1.5rem; }
+  .field-label {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--amber); margin-bottom: 0.4rem; display: block;
+  }
+  .field-input {
+    width: 100%; background: var(--slate);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.65rem 0.75rem; color: var(--cream);
+    font-size: 0.95rem; outline: none;
+    transition: border-color 0.15s;
+    margin-bottom: 0.75rem;
+  }
+  .field-input:focus { border-color: var(--amber); }
+  textarea.field-input { resize: vertical; min-height: 70px; font-family: inherit; }
+  select.field-input { cursor: pointer; }
+
+  .section-label {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--cream-dim); margin-bottom: 1rem; padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Question cards */
+  .q-card {
+    background: var(--slate);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .q-card:hover { border-color: var(--border-bright); }
+  .q-card-header {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.85rem 1rem; cursor: pointer;
+  }
+  .q-number {
+    background: var(--amber); color: var(--navy);
+    width: 26px; height: 26px; border-radius: 50%;
+    font-size: 0.75rem; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .q-card-preview { flex: 1; font-size: 0.9rem; color: var(--cream-dim); }
+  .q-card-preview strong { color: var(--cream); display: block; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .q-card-preview span { font-size: 0.75rem; font-family: monospace; }
+  .q-expand-icon { color: var(--cream-dim); font-size: 0.8rem; transition: transform 0.2s; }
+  .q-card.expanded .q-expand-icon { transform: rotate(180deg); }
+
+  .q-card-body { padding: 0 1rem 1rem; display: none; }
+  .q-card.expanded .q-card-body { display: block; }
+
+  .loc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .get-loc-btn {
+    background: var(--slate2); color: var(--amber);
+    border: 1px solid var(--border-bright); border-radius: 6px;
+    padding: 0.55rem; font-size: 0.8rem; cursor: pointer;
+    width: 100%; margin-bottom: 0.75rem; font-weight: 600;
+    transition: all 0.15s;
+  }
+  .get-loc-btn:hover { background: var(--amber); color: var(--navy); }
+
+  .answer-type-row { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .type-tab {
+    flex: 1; padding: 0.5rem; text-align: center; border-radius: 6px;
+    font-size: 0.8rem; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--border); color: var(--cream-dim);
+    transition: all 0.15s; background: none;
+  }
+  .type-tab.active { background: var(--amber); color: var(--navy); border-color: var(--amber); }
+
+  .mc-options { margin-top: 0.5rem; }
+  .mc-option-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .correct-radio {
+    width: 18px; height: 18px; accent-color: var(--sage);
+    cursor: pointer; flex-shrink: 0;
+  }
+  .mc-option-input {
+    flex: 1; background: var(--slate2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 0.5rem 0.6rem; color: var(--cream);
+    font-size: 0.85rem; outline: none;
+  }
+  .mc-option-input:focus { border-color: var(--amber); }
+  .remove-opt-btn {
+    background: none; border: none; color: var(--coral);
+    cursor: pointer; font-size: 1rem; padding: 0.2rem; flex-shrink: 0;
+  }
+  .add-opt-btn {
+    background: none; border: 1px dashed var(--border);
+    color: var(--cream-dim); border-radius: 6px;
+    padding: 0.45rem; font-size: 0.8rem; cursor: pointer;
+    width: 100%; margin-top: 0.25rem; transition: all 0.15s;
+  }
+  .add-opt-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+  .delete-q-btn {
+    background: none; border: 1px solid rgba(224,90,71,0.3); color: var(--coral);
+    border-radius: 6px; padding: 0.5rem; font-size: 0.8rem; cursor: pointer;
+    width: 100%; margin-top: 0.75rem; font-weight: 600;
+    transition: all 0.15s;
+  }
+  .delete-q-btn:hover { background: var(--coral); color: white; }
+
+  .add-q-btn {
+    width: 100%; padding: 0.85rem; border-radius: 8px;
+    border: 1.5px dashed var(--border-bright);
+    background: none; color: var(--amber); font-size: 0.9rem;
+    font-weight: 600; cursor: pointer; margin-top: 0.5rem;
+    transition: all 0.15s; margin-bottom: 1.5rem;
+  }
+  .add-q-btn:hover { background: rgba(245,166,35,0.1); }
+
+  .save-quiz-btn {
+    width: 100%; padding: 1rem; background: var(--amber);
+    color: var(--navy); border: none; border-radius: 8px;
+    font-size: 1rem; font-weight: 700; cursor: pointer;
+    margin-bottom: 1.5rem; transition: all 0.15s;
+  }
+  .save-quiz-btn:hover { background: #FFB733; }
+
+  /* ── QUIZ LIST ── */
+  #quiz-list { background: var(--navy); }
+  .quiz-list-body { flex: 1; padding: 1.25rem; overflow-y: auto; }
+  .empty-state {
+    text-align: center; padding: 3rem 1rem; color: var(--cream-dim);
+  }
+  .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; display: block; }
+  .quiz-item {
+    background: var(--slate); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1rem; margin-bottom: 0.75rem;
+    display: flex; align-items: center; gap: 0.75rem;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .quiz-item:hover { border-color: var(--amber); transform: translateX(2px); }
+  .quiz-item-icon {
+    width: 44px; height: 44px; background: rgba(245,166,35,0.15);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; flex-shrink: 0;
+  }
+  .quiz-item-info { flex: 1; }
+  .quiz-item-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.2rem; }
+  .quiz-item-meta { font-size: 0.75rem; color: var(--cream-dim); font-family: monospace; }
+  .quiz-item-arrow { color: var(--amber); font-size: 1rem; }
+  .quiz-delete-btn {
+    background: none; border: none; color: var(--coral);
+    cursor: pointer; font-size: 1rem; padding: 0.25rem;
+  }
+
+  /* ── PLAYER ── */
+  #player { background: var(--navy); }
+  .player-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Progress */
+  .progress-bar-wrap {
+    height: 3px; background: var(--slate); flex-shrink: 0;
+  }
+  .progress-bar { height: 100%; background: var(--amber); transition: width 0.4s ease; }
+
+  /* Navigation phase */
+  .nav-phase {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 1.5rem; text-align: center;
+  }
+  .nav-hint {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--cream-dim); margin-bottom: 0.5rem;
+  }
+  .nav-question-title {
+    font-size: 1.1rem; font-weight: 700; margin-bottom: 2rem;
+    color: var(--amber); max-width: 300px;
+  }
+
+  /* Compass */
+  .compass-wrap {
+    position: relative; width: 200px; height: 200px; margin-bottom: 1.5rem;
+  }
+  .compass-ring {
+    width: 200px; height: 200px; border-radius: 50%;
+    border: 2px solid var(--border-bright);
+    background: radial-gradient(circle, var(--slate2) 0%, var(--slate) 100%);
+    position: relative; display: flex; align-items: center; justify-content: center;
+  }
+  .compass-ring::before {
+    content: 'N'; position: absolute; top: 10px;
+    font-size: 0.65rem; font-weight: 700; color: var(--cream-dim); letter-spacing: 0.1em;
+  }
+  .compass-ring::after {
+    content: 'S'; position: absolute; bottom: 10px;
+    font-size: 0.65rem; font-weight: 700; color: var(--cream-dim); letter-spacing: 0.1em;
+  }
+  .compass-needle-wrap {
+    position: absolute; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .compass-needle {
+    width: 6px; height: 80px; position: relative;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .needle-north {
+    width: 6px; height: 48px; background: var(--amber);
+    clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+    border-radius: 1px;
+  }
+  .needle-south {
+    width: 6px; height: 32px; background: var(--slate2);
+    clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+    border-radius: 1px;
+  }
+  .needle-center {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--cream); position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    border: 2px solid var(--slate2);
+  }
+
+  .distance-display {
+    font-family: monospace; font-size: 2.5rem; font-weight: 700;
+    color: var(--cream); letter-spacing: -0.02em;
+  }
+  .distance-unit { font-size: 1rem; color: var(--cream-dim); margin-left: 0.3rem; }
+  .distance-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--cream-dim); margin-top: 0.25rem; }
+
+  .arrived-badge {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: rgba(91,138,114,0.2); border: 1px solid var(--sage);
+    color: var(--sage); border-radius: 20px; padding: 0.4rem 1rem;
+    font-size: 0.85rem; font-weight: 600; margin-top: 1rem;
+    animation: pulse-badge 1.5s ease infinite;
+  }
+  @keyframes pulse-badge {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(91,138,114,0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(91,138,114,0); }
+  }
+
+  .start-question-btn {
+    margin-top: 1.5rem; padding: 0.85rem 2.5rem;
+    background: var(--sage); color: white; border: none;
+    border-radius: 8px; font-size: 1rem; font-weight: 700;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .start-question-btn:hover { background: #6fa088; }
+
+  /* Question phase */
+  .question-phase {
+    flex: 1; overflow-y: auto; padding: 1.25rem;
+  }
+  .q-location-tag {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--amber); margin-bottom: 0.75rem;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .question-text {
+    font-size: 1.2rem; font-weight: 700; line-height: 1.4;
+    margin-bottom: 1.5rem; color: var(--cream);
+  }
+
+  /* MC options */
+  .mc-answers { display: flex; flex-direction: column; gap: 0.6rem; }
+  .mc-answer-btn {
+    background: var(--slate); border: 1.5px solid var(--border);
+    color: var(--cream); border-radius: 8px;
+    padding: 0.85rem 1rem; text-align: left; cursor: pointer;
+    font-size: 0.95rem; font-weight: 500; transition: all 0.15s;
+    display: flex; align-items: center; gap: 0.75rem;
+  }
+  .mc-answer-btn:hover:not(:disabled) { border-color: var(--amber); background: rgba(245,166,35,0.08); }
+  .mc-answer-btn .opt-letter {
+    width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid currentColor;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+  }
+  .mc-answer-btn.correct { border-color: var(--sage); background: rgba(91,138,114,0.2); color: var(--sage); }
+  .mc-answer-btn.wrong { border-color: var(--coral); background: rgba(224,90,71,0.15); color: var(--coral); }
+  .mc-answer-btn:disabled { cursor: default; }
+
+  /* Open answer */
+  .open-answer-wrap { display: flex; flex-direction: column; gap: 0.75rem; }
+  .open-answer-input {
+    background: var(--slate); border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 0.85rem 1rem; color: var(--cream);
+    font-size: 1rem; outline: none; width: 100%; font-family: inherit;
+    transition: border-color 0.15s; resize: vertical; min-height: 80px;
+  }
+  .open-answer-input:focus { border-color: var(--amber); }
+  .submit-answer-btn {
+    background: var(--amber); color: var(--navy); border: none;
+    border-radius: 8px; padding: 0.85rem; font-size: 1rem;
+    font-weight: 700; cursor: pointer; transition: all 0.15s;
+  }
+  .submit-answer-btn:hover { background: #FFB733; }
+
+  .answer-feedback {
+    margin-top: 1rem; padding: 1rem; border-radius: 8px;
+    display: none; animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .answer-feedback.correct { background: rgba(91,138,114,0.2); border: 1px solid var(--sage); color: var(--sage); }
+  .answer-feedback.wrong { background: rgba(224,90,71,0.15); border: 1px solid var(--coral); color: var(--coral); }
+  .feedback-icon { font-size: 1.5rem; margin-bottom: 0.3rem; display: block; }
+  .feedback-correct-answer { color: var(--cream-dim); font-size: 0.85rem; margin-top: 0.5rem; }
+
+  .next-q-btn {
+    width: 100%; margin-top: 1rem; padding: 0.85rem;
+    background: var(--slate2); color: var(--cream); border: 1px solid var(--border-bright);
+    border-radius: 8px; font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; display: none;
+  }
+  .next-q-btn:hover { background: var(--amber); color: var(--navy); border-color: var(--amber); }
+
+  /* Results */
+  #results {
+    background: var(--navy); align-items: center; justify-content: center;
+    text-align: center; padding: 2rem;
+  }
+  .results-icon { font-size: 4rem; margin-bottom: 1rem; display: block; }
+  .results-title { font-size: 1.8rem; font-weight: 800; margin-bottom: 0.5rem; }
+  .score-big {
+    font-size: 4rem; font-weight: 800; color: var(--amber);
+    font-family: monospace; line-height: 1; margin: 1rem 0;
+  }
+  .score-label { color: var(--cream-dim); font-size: 0.9rem; margin-bottom: 2rem; }
+  .result-details { width: 100%; max-width: 360px; margin-bottom: 2rem; }
+  .result-q-row {
+    display: flex; align-items: center; gap: 0.75rem;
+    background: var(--slate); border-radius: 8px; padding: 0.75rem;
+    margin-bottom: 0.5rem; text-align: left;
+  }
+  .result-q-icon { font-size: 1.1rem; flex-shrink: 0; }
+  .result-q-text { flex: 1; font-size: 0.85rem; color: var(--cream-dim); }
+  .result-q-text strong { color: var(--cream); display: block; font-size: 0.9rem; }
+
+  /* GPS status bar */
+  .gps-status {
+    padding: 0.4rem 1.25rem; font-size: 0.7rem; font-family: monospace;
+    color: var(--cream-dim); background: var(--slate); flex-shrink: 0;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .gps-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sage); flex-shrink: 0; animation: blink 2s ease infinite; }
+  .gps-dot.searching { background: var(--amber); }
+  .gps-dot.error { background: var(--coral); animation: none; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* Radius input */
+  .radius-row { display: flex; align-items: center; gap: 0.5rem; }
+  .radius-input {
+    width: 80px; background: var(--slate2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 0.5rem 0.6rem; color: var(--cream);
+    font-size: 0.85rem; outline: none; text-align: center;
+  }
+  .radius-unit { font-size: 0.8rem; color: var(--cream-dim); }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--slate2); color: var(--cream); padding: 0.75rem 1.25rem;
+    border-radius: 8px; font-size: 0.9rem; font-weight: 500;
+    border: 1px solid var(--border-bright); z-index: 999;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Paste location */
+  .paste-loc-wrap {
+    background: var(--slate2); border: 1px solid var(--border-bright);
+    border-radius: 8px; padding: 0.75rem; margin-bottom: 0.5rem;
+  }
+  .paste-loc-wrap .field-label { color: var(--cream); margin-bottom: 0.4rem; }
+  .paste-loc-row { display: flex; gap: 0.5rem; align-items: stretch; margin-bottom: 0.5rem; }
+  .paste-loc-input { font-family: monospace; font-size: 0.85rem !important; }
+  .parse-loc-btn {
+    background: var(--amber); color: var(--navy); border: none;
+    border-radius: 6px; padding: 0 0.9rem; font-size: 1rem;
+    font-weight: 700; cursor: pointer; flex-shrink: 0; transition: all 0.15s;
+  }
+  .parse-loc-btn:hover { background: #FFB733; }
+  .paste-loc-hint {
+    font-size: 0.72rem; color: var(--cream-dim); line-height: 1.5;
+  }
+  .maps-link {
+    color: var(--amber); text-decoration: none; margin-left: 0.3rem;
+    font-size: 0.72rem;
+  }
+  .maps-link:hover { text-decoration: underline; }
+  .verify-link {
+    display: inline-block; margin-top: 0.4rem; font-size: 0.78rem;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="home" class="screen active">
+  <div class="compass-logo">
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="46" stroke="#F5A623" stroke-width="2" opacity="0.4"/>
+      <circle cx="50" cy="50" r="36" stroke="#F5A623" stroke-width="1" opacity="0.2"/>
+      <line x1="50" y1="8" x2="50" y2="18" stroke="#F0EDE6" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+      <line x1="50" y1="82" x2="50" y2="92" stroke="#F0EDE6" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/>
+      <line x1="8" y1="50" x2="18" y2="50" stroke="#F0EDE6" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/>
+      <line x1="82" y1="50" x2="92" y2="50" stroke="#F0EDE6" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/>
+      <polygon points="50,18 54,50 50,46 46,50" fill="#F5A623"/>
+      <polygon points="50,82 54,50 50,54 46,50" fill="#243447"/>
+      <circle cx="50" cy="50" r="5" fill="#F0EDE6"/>
+      <circle cx="50" cy="50" r="2.5" fill="#0F1923"/>
+    </svg>
+  </div>
+  <h1 class="home-title">Geo<span>Quiz</span></h1>
+  <p class="home-sub">Location-Based Quiz Explorer</p>
+  <div class="home-buttons">
+    <button class="btn-primary" onclick="showScreen('quiz-list')">▶ Play a Quiz</button>
+    <button class="btn-secondary" onclick="startCreator()">+ Create a Quiz</button>
+  </div>
+</div>
+
+<!-- QUIZ LIST -->
+<div id="quiz-list" class="screen">
+  <div class="app-header">
+    <button class="back-btn" onclick="showScreen('home')">←</button>
+    <span class="header-title">Saved Quizzes</span>
+    <button class="btn-primary" style="padding:0.4rem 0.85rem;font-size:0.8rem;" onclick="startCreator()">+ New</button>
+  </div>
+  <div class="quiz-list-body" id="quiz-list-body">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+<!-- CREATOR -->
+<div id="creator" class="screen">
+  <div class="app-header">
+    <button class="back-btn" onclick="confirmLeaveCreator()">←</button>
+    <span class="header-title" id="creator-header-title">New Quiz</span>
+    <span class="header-meta" id="creator-q-count">0 stops</span>
+  </div>
+  <div class="creator-body">
+    <div class="quiz-meta-form">
+      <label class="field-label">Quiz Title</label>
+      <input type="text" class="field-input" id="quiz-title" placeholder="e.g. City History Walk">
+      <label class="field-label">Description (optional)</label>
+      <textarea class="field-input" id="quiz-desc" placeholder="What's this quiz about?"></textarea>
+    </div>
+    <div class="section-label">QUESTION STOPS</div>
+    <div id="questions-container"></div>
+    <button class="add-q-btn" onclick="addQuestion()">＋ Add Question Stop</button>
+    <button class="save-quiz-btn" onclick="saveQuiz()">💾 Save Quiz</button>
+  </div>
+</div>
+
+<!-- PLAYER -->
+<div id="player" class="screen">
+  <div class="app-header">
+    <button class="back-btn" onclick="stopPlaying()">←</button>
+    <span class="header-title" id="player-quiz-title">Quiz</span>
+    <span class="header-meta" id="player-q-counter">1 / 1</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+  <div class="gps-status">
+    <div class="gps-dot searching" id="gps-dot"></div>
+    <span id="gps-status-text">Acquiring GPS…</span>
+  </div>
+  <div class="player-body" id="player-body">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="results" class="screen">
+  <span class="results-icon" id="results-icon">🏆</span>
+  <h2 class="results-title" id="results-title">Quiz Complete!</h2>
+  <div class="score-big" id="score-display">0/0</div>
+  <p class="score-label" id="score-label">questions answered correctly</p>
+  <div class="result-details" id="result-details"></div>
+  <button class="btn-primary" onclick="showScreen('quiz-list')">Back to Quizzes</button>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──
+let quizzes = JSON.parse(localStorage.getItem('geoQuizzes') || '[]');
+let editingQuiz = null;
+let currentQuestions = []; // creator state
+let playerState = {
+  quiz: null,
+  questionIndex: 0,
+  answers: [],
+  watchId: null,
+  currentPos: null,
+  phase: 'navigate', // 'navigate' | 'question'
+  answered: false,
+};
+
+// ── UTILITIES ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'quiz-list') renderQuizList();
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const φ1 = lat1 * Math.PI / 180, φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180, Δλ = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function bearingTo(lat1, lon1, lat2, lon2) {
+  const φ1 = lat1*Math.PI/180, φ2 = lat2*Math.PI/180;
+  const Δλ = (lon2-lon1)*Math.PI/180;
+  const y = Math.sin(Δλ)*Math.cos(φ2);
+  const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+  return (Math.atan2(y,x)*180/Math.PI + 360) % 360;
+}
+
+function formatDist(m) {
+  if (m >= 1000) return [(m/1000).toFixed(1), 'km'];
+  return [Math.round(m), 'm'];
+}
+
+function saveQuizzes() {
+  localStorage.setItem('geoQuizzes', JSON.stringify(quizzes));
+}
+
+// ── QUIZ LIST ──
+function renderQuizList() {
+  const body = document.getElementById('quiz-list-body');
+  if (!quizzes.length) {
+    body.innerHTML = `<div class="empty-state">
+      <span class="icon">🗺️</span>
+      <p>No quizzes yet.<br>Create your first location-based quiz!</p>
+      <br><button class="btn-primary" onclick="startCreator()">+ Create Quiz</button>
+    </div>`;
+    return;
+  }
+  body.innerHTML = quizzes.map((q, i) => `
+    <div class="quiz-item" onclick="playQuiz(${i})">
+      <div class="quiz-item-icon">🗺️</div>
+      <div class="quiz-item-info">
+        <div class="quiz-item-title">${q.title || 'Untitled Quiz'}</div>
+        <div class="quiz-item-meta">${q.questions.length} stop${q.questions.length!==1?'s':''} · created ${new Date(q.created).toLocaleDateString()}</div>
+      </div>
+      <button class="quiz-delete-btn" onclick="event.stopPropagation();deleteQuiz(${i})">🗑</button>
+      <span class="quiz-item-arrow">›</span>
+    </div>
+  `).join('');
+}
+
+function deleteQuiz(i) {
+  if (!confirm(`Delete "${quizzes[i].title || 'this quiz'}"?`)) return;
+  quizzes.splice(i, 1);
+  saveQuizzes();
+  renderQuizList();
+  toast('Quiz deleted');
+}
+
+// ── CREATOR ──
+let questionIdCounter = 0;
+
+function startCreator(quizIndex) {
+  editingQuiz = quizIndex !== undefined ? quizIndex : null;
+  currentQuestions = [];
+  questionIdCounter = 0;
+
+  if (editingQuiz !== null) {
+    const q = quizzes[editingQuiz];
+    document.getElementById('quiz-title').value = q.title;
+    document.getElementById('quiz-desc').value = q.description || '';
+    currentQuestions = JSON.parse(JSON.stringify(q.questions));
+    questionIdCounter = currentQuestions.length;
+  } else {
+    document.getElementById('quiz-title').value = '';
+    document.getElementById('quiz-desc').value = '';
+  }
+
+  renderCreatorQuestions();
+  showScreen('creator');
+  updateCreatorMeta();
+}
+
+function updateCreatorMeta() {
+  document.getElementById('creator-q-count').textContent = currentQuestions.length + ' stop' + (currentQuestions.length!==1?'s':'');
+  const title = document.getElementById('quiz-title').value;
+  document.getElementById('creator-header-title').textContent = title || 'New Quiz';
+}
+
+document.addEventListener('input', e => {
+  if (e.target.id === 'quiz-title') updateCreatorMeta();
+});
+
+function addQuestion() {
+  const q = {
+    id: questionIdCounter++,
+    lat: '', lon: '', radius: 30,
+    question: '',
+    type: 'open', // 'open' | 'mc'
+    options: ['', ''],
+    correctIndex: 0,
+    openAnswer: '',
+  };
+  currentQuestions.push(q);
+  renderCreatorQuestions();
+  updateCreatorMeta();
+  // Scroll to new card
+  setTimeout(() => {
+    const cards = document.querySelectorAll('.q-card');
+    cards[cards.length-1]?.scrollIntoView({behavior:'smooth', block:'nearest'});
+    toggleQCard(currentQuestions.length-1, true);
+  }, 50);
+}
+
+function renderCreatorQuestions() {
+  const container = document.getElementById('questions-container');
+  if (!currentQuestions.length) { container.innerHTML = ''; return; }
+  container.innerHTML = currentQuestions.map((q, i) => buildQCard(q, i)).join('');
+}
+
+function buildQCard(q, i) {
+  const letters = ['A','B','C','D','E'];
+  const optionsHtml = q.type === 'mc' ? `
+    <div class="mc-options" id="mc-opts-${i}">
+      ${q.options.map((opt, oi) => `
+        <div class="mc-option-row">
+          <input type="radio" class="correct-radio" name="correct-${i}" value="${oi}"
+            ${q.correctIndex===oi?'checked':''} onchange="setCorrect(${i},${oi})" title="Mark as correct">
+          <input type="text" class="mc-option-input" placeholder="Option ${letters[oi]}"
+            value="${escHtml(opt)}" oninput="updateOption(${i},${oi},this.value)">
+          ${q.options.length > 2 ? `<button class="remove-opt-btn" onclick="removeOption(${i},${oi})">×</button>` : ''}
+        </div>
+      `).join('')}
+      ${q.options.length < 5 ? `<button class="add-opt-btn" onclick="addOption(${i})">+ Add option</button>` : ''}
+    </div>
+  ` : `
+    <label class="field-label" style="margin-top:0.5rem">Accepted Answer</label>
+    <input type="text" class="field-input" placeholder="Correct answer (case-insensitive)"
+      value="${escHtml(q.openAnswer || '')}" oninput="updateOpenAnswer(${i},this.value)">
+  `;
+
+  return `
+  <div class="q-card" id="q-card-${i}">
+    <div class="q-card-header" onclick="toggleQCard(${i})">
+      <div class="q-number">${i+1}</div>
+      <div class="q-card-preview">
+        <strong>${q.question || 'Untitled question'}</strong>
+        <span>${q.lat && q.lon ? `📍 ${parseFloat(q.lat).toFixed(4)}, ${parseFloat(q.lon).toFixed(4)}` : '📍 No location set'}</span>
+      </div>
+      <span class="q-expand-icon">▾</span>
+    </div>
+    <div class="q-card-body">
+      <label class="field-label">Question</label>
+      <textarea class="field-input" rows="2" placeholder="What do you want to ask here?"
+        oninput="updateQField(${i},'question',this.value)">${escHtml(q.question)}</textarea>
+
+      <label class="field-label">Location</label>
+      <button class="get-loc-btn" onclick="useCurrentLocation(${i})">📍 Use My Current Location</button>
+      <div class="paste-loc-wrap">
+        <label class="field-label">Paste from Google Maps / any source</label>
+        <div class="paste-loc-row">
+          <input type="text" class="field-input paste-loc-input" id="paste-loc-${i}"
+            placeholder='e.g. 51.5074, -0.1278  or  51°30\'26"N 0°7′39"W'
+            style="margin-bottom:0;flex:1;"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();parseCoords(${i});}"
+            onpaste="setTimeout(()=>parseCoords(${i}),50)">
+          <button class="parse-loc-btn" onclick="parseCoords(${i})">→</button>
+        </div>
+        <div class="paste-loc-hint">
+          In Google Maps: right-click a spot → the coordinates appear at the top of the menu — tap them to copy.
+          <a class="maps-link" href="https://maps.google.com" target="_blank">Open Google Maps ↗</a>
+        </div>
+      </div>
+      <div class="loc-row" style="margin-top:0.5rem;">
+        <div>
+          <label class="field-label">Latitude</label>
+          <input type="number" step="any" class="field-input" id="lat-field-${i}" placeholder="e.g. 51.5074"
+            value="${q.lat}" oninput="updateQField(${i},'lat',this.value)">
+        </div>
+        <div>
+          <label class="field-label">Longitude</label>
+          <input type="number" step="any" class="field-input" id="lon-field-${i}" placeholder="e.g. -0.1278"
+            value="${q.lon}" oninput="updateQField(${i},'lon',this.value)">
+        </div>
+      </div>
+      ${q.lat && q.lon ? `<a class="maps-link verify-link" href="https://maps.google.com/?q=${q.lat},${q.lon}" target="_blank">🗺 Verify on Google Maps ↗</a>` : ''}
+      <label class="field-label">Trigger Radius</label>
+      <div class="radius-row">
+        <input type="number" class="radius-input field-input" placeholder="30"
+          value="${q.radius||30}" oninput="updateQField(${i},'radius',parseFloat(this.value)||30)" style="width:80px;margin-bottom:0">
+        <span class="radius-unit">metres — question triggers when within this distance</span>
+      </div>
+
+      <label class="field-label" style="margin-top:0.75rem">Answer Type</label>
+      <div class="answer-type-row">
+        <button class="type-tab ${q.type==='open'?'active':''}" onclick="setQType(${i},'open')">Open Answer</button>
+        <button class="type-tab ${q.type==='mc'?'active':''}" onclick="setQType(${i},'mc')">Multiple Choice</button>
+      </div>
+      ${optionsHtml}
+
+      <button class="delete-q-btn" onclick="deleteQuestion(${i})">🗑 Remove this stop</button>
+    </div>
+  </div>`;
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toggleQCard(i, forceOpen) {
+  const card = document.getElementById('q-card-'+i);
+  if (!card) return;
+  const shouldOpen = forceOpen !== undefined ? forceOpen : !card.classList.contains('expanded');
+  card.classList.toggle('expanded', shouldOpen);
+}
+
+function updateQField(i, field, val) {
+  currentQuestions[i][field] = val;
+  // Update preview without full re-render
+  const card = document.getElementById('q-card-'+i);
+  if (!card) return;
+  const preview = card.querySelector('.q-card-preview strong');
+  const locSpan = card.querySelector('.q-card-preview span');
+  if (field === 'question' && preview) preview.textContent = val || 'Untitled question';
+  if ((field==='lat'||field==='lon') && locSpan) {
+    const q = currentQuestions[i];
+    locSpan.textContent = q.lat && q.lon ? `📍 ${parseFloat(q.lat).toFixed(4)}, ${parseFloat(q.lon).toFixed(4)}` : '📍 No location set';
+  }
+}
+
+function updateOption(i, oi, val) { currentQuestions[i].options[oi] = val; }
+function updateOpenAnswer(i, val) { currentQuestions[i].openAnswer = val; }
+function setCorrect(i, oi) { currentQuestions[i].correctIndex = oi; }
+
+function setQType(i, type) {
+  currentQuestions[i].type = type;
+  // Re-render just this card's body
+  const card = document.getElementById('q-card-'+i);
+  const wasExpanded = card?.classList.contains('expanded');
+  renderCreatorQuestions();
+  if (wasExpanded) toggleQCard(i, true);
+}
+
+function addOption(i) {
+  if (currentQuestions[i].options.length >= 5) return;
+  currentQuestions[i].options.push('');
+  const card = document.getElementById('q-card-'+i);
+  const wasExpanded = card?.classList.contains('expanded');
+  renderCreatorQuestions();
+  if (wasExpanded) toggleQCard(i, true);
+}
+
+function removeOption(i, oi) {
+  currentQuestions[i].options.splice(oi, 1);
+  if (currentQuestions[i].correctIndex >= currentQuestions[i].options.length)
+    currentQuestions[i].correctIndex = 0;
+  const card = document.getElementById('q-card-'+i);
+  const wasExpanded = card?.classList.contains('expanded');
+  renderCreatorQuestions();
+  if (wasExpanded) toggleQCard(i, true);
+}
+
+function deleteQuestion(i) {
+  currentQuestions.splice(i, 1);
+  renderCreatorQuestions();
+  updateCreatorMeta();
+}
+
+function useCurrentLocation(i) {
+  if (!navigator.geolocation) {
+    toast('GPS not available — paste coordinates instead');
+    return;
+  }
+  toast('Getting location…');
+  navigator.geolocation.getCurrentPosition(pos => {
+    applyCoords(i, pos.coords.latitude, pos.coords.longitude);
+    toast('Location set ✓');
+  }, err => {
+    const msg = err.code === 1
+      ? 'Permission denied — paste coordinates from Google Maps instead'
+      : 'Could not get GPS — try pasting coordinates';
+    toast(msg);
+  }, { enableHighAccuracy: true, timeout: 8000 });
+}
+
+function parseCoords(i) {
+  const raw = (document.getElementById('paste-loc-'+i)?.value || '').trim();
+  if (!raw) { toast('Paste a coordinate string first'); return; }
+
+  // Normalise: replace any whitespace variants and unicode minus with standard chars
+  const s = raw.replace(/\u00a0|\u202f|\u2009/g, ' ').replace(/\u2212/g, '-');
+
+  let lat, lon;
+
+  // 1. Google Maps / Apple Maps URL  @lat,lon or ?q=lat,lon or /place/.../@lat,lon
+  const urlMatch = s.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) ||
+                   s.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/) ||
+                   s.match(/ll=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (urlMatch) { lat = parseFloat(urlMatch[1]); lon = parseFloat(urlMatch[2]); }
+
+  // 2. Decimal degrees — must have a decimal point in at least one number
+  //    Matches: "51.5074, -0.1278"  "51.5074 -0.1278"  "-33.8688, 151.2093"
+  if (lat === undefined) {
+    const dec = s.match(/^(-?\d+\.\d+)[,\s]\s*(-?\d+\.\d+)$/);
+    if (dec) { lat = parseFloat(dec[1]); lon = parseFloat(dec[2]); }
+  }
+
+  // 3. Decimal degrees anywhere in a longer string (e.g. copied with extra text)
+  if (lat === undefined) {
+    const dec2 = s.match(/(-?\d+\.\d{4,})[,\s]+(-?\d+\.\d{4,})/);
+    if (dec2) { lat = parseFloat(dec2[1]); lon = parseFloat(dec2[2]); }
+  }
+
+  // 4. DMS  51°30'26"N 0°7'39"W  (handles Unicode ′ ″ ° and variants)
+  if (lat === undefined) {
+    const dms = s.match(/(\d+)[°d]\s*(\d+)[''′]\s*([\d.]+)[""″]?\s*([NS])[,\s]+(\d+)[°d]\s*(\d+)[''′]\s*([\d.]+)[""″]?\s*([EW])/i);
+    if (dms) {
+      lat = (parseInt(dms[1]) + parseInt(dms[2])/60 + parseFloat(dms[3])/3600) * (dms[4].toUpperCase()==='S' ? -1 : 1);
+      lon = (parseInt(dms[5]) + parseInt(dms[6])/60 + parseFloat(dms[7])/3600) * (dms[8].toUpperCase()==='W' ? -1 : 1);
+    }
+  }
+
+  if (lat === undefined || lon === undefined || isNaN(lat) || isNaN(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+    toast("Couldn't read those coordinates — try: 51.5074, -0.1278");
+    return;
+  }
+
+  applyCoords(i, lat, lon);
+  toast(`Location set: ${lat.toFixed(5)}, ${lon.toFixed(5)} ✓`);
+}
+
+function applyCoords(i, lat, lon) {
+  currentQuestions[i].lat = lat.toFixed(6);
+  currentQuestions[i].lon = lon.toFixed(6);
+  // Update fields directly without full re-render
+  const latField = document.getElementById('lat-field-'+i);
+  const lonField = document.getElementById('lon-field-'+i);
+  if (latField) latField.value = currentQuestions[i].lat;
+  if (lonField) lonField.value = currentQuestions[i].lon;
+  // Update preview span
+  const card = document.getElementById('q-card-'+i);
+  const locSpan = card?.querySelector('.q-card-preview span');
+  if (locSpan) locSpan.textContent = `📍 ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+  // Update verify link
+  const verifyArea = card?.querySelector('.verify-link');
+  if (verifyArea) {
+    verifyArea.href = `https://maps.google.com/?q=${lat},${lon}`;
+  } else {
+    // Insert it after the loc-row div
+    const locRow = card?.querySelector('.loc-row');
+    if (locRow) {
+      const a = document.createElement('a');
+      a.className = 'maps-link verify-link';
+      a.href = `https://maps.google.com/?q=${lat},${lon}`;
+      a.target = '_blank';
+      a.textContent = '🗺 Verify on Google Maps ↗';
+      locRow.insertAdjacentElement('afterend', a);
+    }
+  }
+}
+
+function saveQuiz() {
+  const title = document.getElementById('quiz-title').value.trim();
+  if (!title) { toast('Please enter a quiz title'); return; }
+  if (!currentQuestions.length) { toast('Add at least one question stop'); return; }
+
+  for (let i = 0; i < currentQuestions.length; i++) {
+    const q = currentQuestions[i];
+    if (!q.lat || !q.lon) { toast(`Q${i+1}: Location not set`); toggleQCard(i, true); return; }
+    if (!q.question.trim()) { toast(`Q${i+1}: Question text is empty`); toggleQCard(i, true); return; }
+    if (q.type === 'open' && !q.openAnswer.trim()) { toast(`Q${i+1}: Please provide the correct answer`); toggleQCard(i, true); return; }
+    if (q.type === 'mc') {
+      const filled = q.options.filter(o => o.trim());
+      if (filled.length < 2) { toast(`Q${i+1}: Add at least 2 options`); toggleQCard(i, true); return; }
+      if (!q.options[q.correctIndex]?.trim()) { toast(`Q${i+1}: Mark a correct option`); toggleQCard(i, true); return; }
+    }
+  }
+
+  const quiz = {
+    title,
+    description: document.getElementById('quiz-desc').value.trim(),
+    questions: JSON.parse(JSON.stringify(currentQuestions)),
+    created: editingQuiz !== null ? quizzes[editingQuiz].created : Date.now(),
+    modified: Date.now(),
+  };
+
+  if (editingQuiz !== null) quizzes[editingQuiz] = quiz;
+  else quizzes.push(quiz);
+  saveQuizzes();
+  toast('Quiz saved! ✓');
+  setTimeout(() => showScreen('quiz-list'), 800);
+}
+
+function confirmLeaveCreator() {
+  if (currentQuestions.length || document.getElementById('quiz-title').value) {
+    if (!confirm('Leave without saving?')) return;
+  }
+  showScreen(editingQuiz !== null ? 'quiz-list' : 'home');
+}
+
+// ── PLAYER ──
+function playQuiz(i) {
+  const quiz = quizzes[i];
+  if (!quiz.questions.length) { toast('This quiz has no questions'); return; }
+  playerState = {
+    quiz, questionIndex: 0, answers: [],
+    watchId: null, currentPos: null,
+    phase: 'navigate', answered: false,
+  };
+  document.getElementById('player-quiz-title').textContent = quiz.title;
+  showScreen('player');
+  startGPS();
+  renderPlayerQuestion();
+}
+
+function stopPlaying() {
+  if (playerState.watchId) navigator.geolocation.clearWatch(playerState.watchId);
+  showScreen('quiz-list');
+}
+
+function startGPS() {
+  if (!navigator.geolocation) {
+    setGPSStatus('error', 'GPS unavailable');
+    return;
+  }
+  setGPSStatus('searching', 'Acquiring GPS…');
+  playerState.watchId = navigator.geolocation.watchPosition(
+    pos => {
+      playerState.currentPos = { lat: pos.coords.latitude, lon: pos.coords.longitude, heading: pos.coords.heading };
+      setGPSStatus('ok', `GPS ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
+      updateNavigation();
+    },
+    err => setGPSStatus('error', 'GPS error: ' + err.message),
+    { enableHighAccuracy: true, maximumAge: 2000 }
+  );
+}
+
+function setGPSStatus(state, text) {
+  const dot = document.getElementById('gps-dot');
+  dot.className = 'gps-dot' + (state==='searching'?' searching': state==='error'?' error':'');
+  document.getElementById('gps-status-text').textContent = text;
+}
+
+function renderPlayerQuestion() {
+  const { quiz, questionIndex } = playerState;
+  const q = quiz.questions[questionIndex];
+  const total = quiz.questions.length;
+  document.getElementById('player-q-counter').textContent = `${questionIndex+1} / ${total}`;
+  document.getElementById('progress-bar').style.width = `${(questionIndex/total)*100}%`;
+
+  const body = document.getElementById('player-body');
+  body.innerHTML = `
+    <div class="nav-phase" id="nav-phase">
+      <div class="nav-hint">Navigate to stop ${questionIndex+1}</div>
+      <div class="nav-question-title">${escHtml(q.question)}</div>
+      <div class="compass-wrap">
+        <div class="compass-ring">
+          <div class="compass-needle-wrap" id="compass-needle-wrap">
+            <div class="compass-needle">
+              <div class="needle-north"></div>
+              <div class="needle-center"></div>
+              <div class="needle-south"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="distance-display"><span id="dist-num">—</span><span class="distance-unit" id="dist-unit">m</span></div>
+      <div class="distance-label">distance to question spot</div>
+      <div id="arrived-area"></div>
+    </div>
+    <div class="question-phase" id="question-phase" style="display:none;">
+      <div class="q-location-tag">📍 Stop ${questionIndex+1} of ${total}</div>
+      <div class="question-text">${escHtml(q.question)}</div>
+      ${q.type === 'mc' ? buildMCAnswers(q, questionIndex) : buildOpenAnswer(questionIndex)}
+      <div class="answer-feedback" id="answer-feedback"></div>
+      <button class="next-q-btn" id="next-q-btn" onclick="nextQuestion()">
+        ${questionIndex+1 < total ? 'Next Stop →' : 'See Results'}
+      </button>
+    </div>
+  `;
+  playerState.phase = 'navigate';
+  playerState.answered = false;
+  updateNavigation();
+}
+
+function buildMCAnswers(q, qi) {
+  const letters = ['A','B','C','D','E'];
+  return `<div class="mc-answers">${q.options.map((opt, oi) => `
+    <button class="mc-answer-btn" onclick="answerMC(${qi},${oi})" id="mc-btn-${oi}">
+      <span class="opt-letter">${letters[oi]}</span>
+      <span>${escHtml(opt)}</span>
+    </button>
+  `).join('')}</div>`;
+}
+
+function buildOpenAnswer(qi) {
+  return `<div class="open-answer-wrap">
+    <textarea class="open-answer-input" id="open-answer-input" placeholder="Type your answer…" rows="3"></textarea>
+    <button class="submit-answer-btn" onclick="answerOpen(${qi})">Submit Answer</button>
+  </div>`;
+}
+
+function updateNavigation() {
+  if (playerState.phase !== 'navigate') return;
+  const { currentPos, quiz, questionIndex } = playerState;
+  const q = quiz.questions[questionIndex];
+  const targetLat = parseFloat(q.lat), targetLon = parseFloat(q.lon);
+  const radius = parseFloat(q.radius) || 30;
+
+  if (!currentPos) return;
+
+  const dist = haversineDistance(currentPos.lat, currentPos.lon, targetLat, targetLon);
+  const [distVal, distUnit] = formatDist(dist);
+  document.getElementById('dist-num').textContent = distVal;
+  document.getElementById('dist-unit').textContent = distUnit;
+
+  // Bearing-based compass (relative to north since we may not have device heading)
+  const bearing = bearingTo(currentPos.lat, currentPos.lon, targetLat, targetLon);
+  // If device heading available, make it relative; else show absolute bearing
+  let needleAngle = bearing;
+  if (currentPos.heading !== null && !isNaN(currentPos.heading)) {
+    needleAngle = bearing - currentPos.heading;
+  }
+  const wrap = document.getElementById('compass-needle-wrap');
+  if (wrap) wrap.style.transform = `rotate(${needleAngle}deg)`;
+
+  // Arrived?
+  const arrivedArea = document.getElementById('arrived-area');
+  if (arrivedArea && dist <= radius) {
+    arrivedArea.innerHTML = `
+      <div class="arrived-badge">✓ You've arrived!</div>
+      <button class="start-question-btn" onclick="showQuestion()">Answer Question</button>
+    `;
+  } else if (arrivedArea) {
+    arrivedArea.innerHTML = '';
+  }
+}
+
+function showQuestion() {
+  playerState.phase = 'question';
+  document.getElementById('nav-phase').style.display = 'none';
+  document.getElementById('question-phase').style.display = 'block';
+}
+
+function answerMC(qi, selectedIndex) {
+  if (playerState.answered) return;
+  playerState.answered = true;
+  const q = playerState.quiz.questions[qi];
+  const correct = selectedIndex === q.correctIndex;
+  playerState.answers.push({ question: q.question, correct, selected: q.options[selectedIndex], correctAnswer: q.options[q.correctIndex] });
+
+  document.querySelectorAll('.mc-answer-btn').forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === q.correctIndex) btn.classList.add('correct');
+    else if (i === selectedIndex && !correct) btn.classList.add('wrong');
+  });
+
+  showFeedback(correct, q.options[q.correctIndex]);
+  document.getElementById('next-q-btn').style.display = 'block';
+}
+
+function answerOpen(qi) {
+  if (playerState.answered) return;
+  const input = document.getElementById('open-answer-input');
+  const userAnswer = input.value.trim();
+  if (!userAnswer) { toast('Please type an answer'); return; }
+
+  playerState.answered = true;
+  const q = playerState.quiz.questions[qi];
+  const correct = userAnswer.toLowerCase() === (q.openAnswer||'').toLowerCase();
+  playerState.answers.push({ question: q.question, correct, selected: userAnswer, correctAnswer: q.openAnswer });
+
+  input.disabled = true;
+  input.previousElementSibling && (input.previousElementSibling.style.display = 'none'); // hide... wrong selector
+  input.nextElementSibling && (input.nextElementSibling.disabled = true);
+  document.querySelector('.submit-answer-btn') && (document.querySelector('.submit-answer-btn').disabled = true);
+
+  showFeedback(correct, q.openAnswer);
+  document.getElementById('next-q-btn').style.display = 'block';
+}
+
+function showFeedback(correct, correctAnswer) {
+  const fb = document.getElementById('answer-feedback');
+  fb.style.display = 'block';
+  if (correct) {
+    fb.className = 'answer-feedback correct';
+    fb.innerHTML = `<span class="feedback-icon">✓</span><strong>Correct!</strong>`;
+  } else {
+    fb.className = 'answer-feedback wrong';
+    fb.innerHTML = `<span class="feedback-icon">✗</span><strong>Not quite.</strong>
+      <p class="feedback-correct-answer">Correct answer: <strong>${escHtml(correctAnswer)}</strong></p>`;
+  }
+}
+
+function nextQuestion() {
+  playerState.questionIndex++;
+  const total = playerState.quiz.questions.length;
+  if (playerState.questionIndex >= total) {
+    showResults();
+  } else {
+    renderPlayerQuestion();
+    updateNavigation();
+  }
+}
+
+function showResults() {
+  if (playerState.watchId) navigator.geolocation.clearWatch(playerState.watchId);
+  const { answers } = playerState;
+  const score = answers.filter(a => a.correct).length;
+  const total = answers.length;
+  const pct = Math.round(score/total*100);
+
+  document.getElementById('results-icon').textContent = pct >= 80 ? '🏆' : pct >= 50 ? '🎯' : '📍';
+  document.getElementById('results-title').textContent = pct >= 80 ? 'Excellent Explorer!' : pct >= 50 ? 'Good Job!' : 'Keep Exploring!';
+  document.getElementById('score-display').textContent = `${score}/${total}`;
+  document.getElementById('score-label').textContent = `${pct}% correct · ${total} question${total!==1?'s':''} answered`;
+
+  document.getElementById('result-details').innerHTML = answers.map((a, i) => `
+    <div class="result-q-row">
+      <span class="result-q-icon">${a.correct ? '✅' : '❌'}</span>
+      <div class="result-q-text">
+        <strong>${escHtml(a.question)}</strong>
+        ${!a.correct ? `Your answer: ${escHtml(a.selected)} · Correct: ${escHtml(a.correctAnswer)}` : 'Correct!'}
+      </div>
+    </div>
+  `).join('');
+
+  showScreen('results');
+  document.getElementById('progress-bar') && (document.getElementById('progress-bar').style.width = '100%');
+}
+
+// ── DEMO QUIZ ──
+// Pre-load a demo quiz if no quizzes exist
+if (!quizzes.length) {
+  quizzes.push({
+    title: "Demo: Try the Creator",
+    description: "Open the creator to build your own quiz with real locations!",
+    questions: [
+      {
+        id: 0, lat: "51.5007", lon: "-0.1246", radius: 100,
+        question: "What famous clock tower stands at the north end of the Palace of Westminster?",
+        type: "mc",
+        options: ["Big Ben", "Tower of London", "Canary Wharf", "St Paul's Cathedral"],
+        correctIndex: 0, openAnswer: ""
+      },
+      {
+        id: 1, lat: "51.5033", lon: "-0.1196", radius: 80,
+        question: "Which river flows through the heart of London?",
+        type: "open",
+        options: [], correctIndex: 0, openAnswer: "Thames"
+      }
+    ],
+    created: Date.now(), modified: Date.now()
+  });
+  saveQuizzes();
+}
+</script>
+</body>
+</html>
